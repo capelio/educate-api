@@ -1,0 +1,8 @@
+node_modules
+db
+server
+uploads
+images/*
+!images/default-profile-image.png
+.exrc
+*.log
