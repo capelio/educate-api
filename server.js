@@ -3,13 +3,14 @@ var bodyParser = require('body-parser')
 var multer = require('multer')
 var app = express()
 var uuid = require('node-uuid')
+var config = require('./config')
 var db = require('./db')
 
 app.use(bodyParser.json())
 app.use('/images', express.static(__dirname + '/images'))
 
 app.use(function (req, res, next) {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000')
+  res.header('Access-Control-Allow-Origin', config.server.allowOrigin)
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE')
   res.header('Vary', 'Accept-Encoding, Origin')
@@ -116,7 +117,7 @@ app.get('/students/:id/donations', function (req, res) {
   }])
 })
 
-var server = app.listen(8080, function () {
+var server = app.listen(config.server.port, function () {
   var host = server.address().address
   var port = server.address().port
 

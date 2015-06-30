@@ -4,5 +4,6 @@ server
 uploads
 images/*
 !images/default-profile-image.png
+config.json
 .exrc
 *.log
