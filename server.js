@@ -1,12 +1,12 @@
 var express = require('express')
 var bodyParser = require('body-parser')
 var multer = require('multer')
-var app = express()
 var uuid = require('node-uuid')
 var fs = require('fs')
 var config = require('./config')
 var db = require('./db')
 
+var app = express()
 app.use(bodyParser.json())
 app.use('/images', express.static(__dirname + '/images'))
 
