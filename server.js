@@ -3,6 +3,7 @@ var bodyParser = require('body-parser')
 var multer = require('multer')
 var app = express()
 var uuid = require('node-uuid')
+var fs = require('fs')
 var config = require('./config')
 var db = require('./db')
 
@@ -87,18 +88,29 @@ app.put('/students/:id', function (req, res) {
 app.delete('/students/:id', function (req, res) {
   var id = req.params.id
 
-  db.exists('students', id, function (err, exists) {
+  db.get('students', id, function (err, student) {
     if (err) {
       res.status(500).send('Internal Error')
-    } else if (!exists) {
+    } else if (!student) {
       res.status(404).send('Not Found')
     } else {
+      var profileImage = student.profileImage
 
       db.destroy('students', id, function (err, record) {
         if (err) {
           res.status(500).send('Internal Error')
         } else {
-          res.status(204).send()
+          res.status(204).send('No Content')
+
+          if (profileImage !== 'default-profile-image.png') {
+            var path = './images/' + profileImage
+            fs.unlink(path, function (err) {
+              if (err) {
+                // TODO: track images we've failed to delete so we can cleanup later
+                console.error('Failed deleting profile image', err)
+              }
+            })
+          }
         }
       })
     }
