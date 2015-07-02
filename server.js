@@ -117,18 +117,6 @@ app.delete('/students/:id', function (req, res) {
   })
 })
 
-app.get('/students/:id/donations', function (req, res) {
-  res.json([{
-    id: 'c',
-    from: 'Larry',
-    amount: 600
-  }, {
-    id: 'd',
-    from: 'Jane',
-    amount: 300
-  }])
-})
-
 var server = app.listen(config.server.port, function () {
   var host = server.address().address
   var port = server.address().port
