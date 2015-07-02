@@ -3,7 +3,7 @@ var bodyParser = require('body-parser')
 var multer = require('multer')
 var uuid = require('node-uuid')
 var fs = require('fs')
-var config = require('./config')
+var config = require('toml').parse(fs.readFileSync('./config.toml'))
 var db = require('./db')
 
 var app = express()
