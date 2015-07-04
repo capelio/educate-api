@@ -1,4 +1,5 @@
 var levelup = require('levelup')
+var _ = require('lodash')
 var uuid = require('node-uuid')
 
 var db = levelup('./db', {
@@ -79,6 +80,25 @@ module.exports = {
   },
 
   query: function (collection, query, callback) {
+    var records = []
+
+    var opts = {
+      gt: collection + collectionSeparator(),
+      lt: collection + collectionTerminator()
+    }
+
+    db.createValueStream(opts)
+      .on('data', function (record) {
+        if (_.isMatch(record, query)) {
+          records.push(record)
+        }
+      })
+      .on('error', function (err) {
+        callback(err)
+      })
+      .on('end', function () {
+        callback(null, records)
+      })
   }
 }
 
