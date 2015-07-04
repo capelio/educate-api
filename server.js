@@ -117,6 +117,53 @@ app.delete('/students/:id', function (req, res) {
   })
 })
 
+app.post('/students/:studentId/donations', function (req, res) {
+  // TODO: make sure student exists first or return 404
+
+  var donation = req.body
+  donation.studentId = req.params.studentId
+
+  db.put('donations', donation, function (err, record) {
+    if (err) {
+      res.status(500).send('Internal Error')
+    } else {
+      res.status(201).json(record)
+    }
+  })
+})
+
+app.get('/students/:studentId/donations', function (req, res) {
+  // TODO: make sure student exists first or return 404
+
+  var studentId = req.params.studentId
+  var query = {
+    studentId: studentId
+  }
+
+  db.query('donations', query, function (err, records) {
+    if (err) {
+      res.status(500).send('Internal Errors')
+    } else {
+      res.json(records)
+    }
+  })
+})
+
+app.get('/students/:studentId/donations/:id', function (req, res) {
+  // TODO: make sure student exists first or return 404
+  var id = req.params.id
+
+  db.get('donations', id, function (err, record) {
+    if (err) {
+      res.status(500).send('Internal Error')
+    } else if (!record) {
+      res.status(404).send('Not Found')
+    } else {
+      res.json(record)
+    }
+  })
+})
+
 var server = app.listen(config.server.port, function () {
   var host = server.address().address
   var port = server.address().port
