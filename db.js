@@ -54,9 +54,6 @@ module.exports = {
       })
   },
 
-  archive: function (collection, record, callback) {
-  },
-
   destroy: function (collection, id, callback) {
     var key = buildKey(collection, id)
 
