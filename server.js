@@ -82,7 +82,7 @@ app.post('/uploads/images', authenticateRequest, [ multer({ dest: './images', re
   res.status(201).json({filename: res.locals.filename})
 })
 
-app.post('/students', function (req, res) {
+app.post('/students', authenticateRequest, function (req, res) {
   var student = req.body
 
   db.put('students', student, function (err, record) {
@@ -118,7 +118,7 @@ app.get('/students/:id', function (req, res) {
   })
 })
 
-app.put('/students/:id', function (req, res) {
+app.put('/students/:id', authenticateRequest, function (req, res) {
   var id = req.params.id
   var student = req.body
 
@@ -140,7 +140,7 @@ app.put('/students/:id', function (req, res) {
   })
 })
 
-app.delete('/students/:id', function (req, res) {
+app.delete('/students/:id', authenticateRequest, function (req, res) {
   var id = req.params.id
 
   db.get('students', id, function (err, student) {
