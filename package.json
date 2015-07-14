@@ -12,7 +12,9 @@
     "node-uuid": "^1.4.3",
     "toml": "^2.2.3"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "standard": "^4.5.4"
+  },
   "scripts": {
     "test": "standard && tape test/**/*.js"
   }
