@@ -2,7 +2,9 @@ var express = require('express')
 var bodyParser = require('body-parser')
 var multer = require('multer')
 var uuid = require('node-uuid')
+var _ = require('lodash')
 var fs = require('fs')
+
 var config = require('toml').parse(fs.readFileSync('./config.toml'))
 var db = require('./db')
 
@@ -12,18 +14,71 @@ app.use('/images', express.static(__dirname + '/images'))
 
 app.use(function (req, res, next) {
   res.header('Access-Control-Allow-Origin', config.server.allowOrigin)
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+  res.header('Access-Control-Allow-Headers', 'Authorization, Origin, X-Requested-With, Content-Type, Accept')
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE')
   res.header('Vary', 'Accept-Encoding, Origin')
   next()
 })
+
+var tokens = []
+
+function generateToken () {
+  return uuid.v4()
+}
+
+function addToken (token) {
+  tokens.push(token)
+}
+
+function removeToken (token) {
+  _.remove(tokens, function (t) {
+    return t === token
+  })
+}
+
+function validToken (token) {
+  return _.contains(tokens, token)
+}
+
+function authenticateRequest (req, res, next) {
+  var token = req.get('Authorization')
+
+  if (token && validToken(token)) {
+    return next()
+  }
+
+  res.status(401).send()
+}
 
 function renameFile (fieldname, filename, req, res) {
   res.locals.filename = uuid.v4()
   return res.locals.filename
 }
 
-app.post('/uploads/images', [ multer({ dest: './images', rename: renameFile }) ], function (req, res) {
+app.post('/signin', function (req, res) {
+  var accounts = config.accounts
+  var credentials = req.body
+
+  if (!_.findWhere(accounts, credentials)) {
+    return res.status(401).send()
+  } else {
+    var token = generateToken()
+    addToken(token)
+    res.json({ token: token })
+  }
+})
+
+app.post('/signout', authenticateRequest, function (req, res) {
+  var token = req.body.token
+
+  if (token) {
+    removeToken(token)
+  }
+
+  res.status(204).send()
+})
+
+app.post('/uploads/images', authenticateRequest, [ multer({ dest: './images', rename: renameFile }) ], function (req, res) {
   res.status(201).json({filename: res.locals.filename})
 })
 
