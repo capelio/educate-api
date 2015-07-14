@@ -100,7 +100,26 @@ app.get('/students', function (req, res) {
     if (err) {
       res.status(500).send('Internal Error')
     } else {
-      res.json(records)
+      // Only get student donations if there are student records
+      if (!records.length) {
+        res.status(200).json([])
+      } else {
+        var done = _.after(records.length, function () {
+          res.status(200).json(records)
+        })
+
+        _.forEach(records, function (student) {
+          db.query('donations', {studentId: student.id}, function (err, records) {
+            if (err) {
+              console.error(err)
+            } else if (records) {
+              student.donations = records
+            }
+
+            done()
+          })
+        })
+      }
     }
   })
 })
