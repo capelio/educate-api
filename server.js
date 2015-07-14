@@ -89,6 +89,7 @@ app.post('/students', authenticateRequest, function (req, res) {
     if (err) {
       res.status(500).send('Internal Error')
     } else {
+      delete record.donations
       res.status(201).json(record)
     }
   })
