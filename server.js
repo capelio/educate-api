@@ -171,7 +171,7 @@ app.delete('/students/:id', authenticateRequest, function (req, res) {
     } else {
       var profileImage = student.profileImage
 
-      db.destroy('students', id, function (err, record) {
+      db.destroy('students', id, function (err) {
         if (err) {
           res.status(500).send('Internal Error')
         } else {
