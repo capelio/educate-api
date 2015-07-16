@@ -241,7 +241,6 @@ app.get('/students/:studentId/donations/:id', function (req, res) {
 
 app.put('/students/:studentId/donations/:id', function (req, res) {
   // TODO: make sure student exists first or return 404
-  var id = req.params.id
   var donation = req.body
 
   db.put('donations', donation, function (err, record) {
