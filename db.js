@@ -9,7 +9,7 @@ var db = levelup('./db', {
 
 module.exports = {
   put: function (collection, record, callback) {
-    var isNew = record.id ? false : true
+    var isNew = !!record.id
 
     record.id = isNew ? uuid.v4() : record.id
 
