@@ -84,12 +84,12 @@ app.post('/uploads/images', authenticateRequest, [ multer({ dest: './images', re
 
 app.post('/students', authenticateRequest, function (req, res) {
   var student = req.body
+  delete student.donations
 
   db.put('students', student, function (err, record) {
     if (err) {
       res.status(500).send('Internal Error')
     } else {
-      delete record.donations
       res.status(201).json(record)
     }
   })
@@ -141,6 +141,7 @@ app.get('/students/:id', function (req, res) {
 app.put('/students/:id', authenticateRequest, function (req, res) {
   var id = req.params.id
   var student = req.body
+  delete student.donations
 
   db.exists('students', id, function (err, exists) {
     if (err) {
