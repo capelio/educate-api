@@ -239,6 +239,33 @@ app.get('/students/:studentId/donations/:id', function (req, res) {
   })
 })
 
+app.put('/students/:studentId/donations/:id', function (req, res) {
+  // TODO: make sure student exists first or return 404
+  var id = req.params.id
+  var donation = req.body
+
+  db.put('donations', donation, function (err, record) {
+    if (err) {
+      res.status(500).send('Internal Error')
+    } else {
+      res.status(201).json(record)
+    }
+  })
+})
+
+app.delete('/students/:studentId/donations/:id', function (req, res) {
+  // TODO: make sure student exists first or return 404
+  var id = req.params.id
+
+  db.destroy('donations', id, function (err) {
+    if (err) {
+      res.status(500).send('Internal Error')
+    } else {
+      res.status(204).send('No Content')
+    }
+  })
+})
+
 var server = app.listen(config.server.port, function () {
   var host = server.address().address
   var port = server.address().port
