@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "educate-api",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "dependencies": {
     "body-parser": "^1.13.2",
     "express": "^4.13.0",
