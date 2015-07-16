@@ -1,6 +1,7 @@
 var levelup = require('levelup')
 var _ = require('lodash')
 var uuid = require('node-uuid')
+var moment = require('moment')
 
 var db = levelup('./db', {
   valueEncoding: 'json'
@@ -8,7 +9,15 @@ var db = levelup('./db', {
 
 module.exports = {
   put: function (collection, record, callback) {
-    record.id = record.id || uuid.v4()
+    var isNew = record.id ? false : true
+
+    record.id = isNew ? uuid.v4() : record.id
+
+    if (isNew) {
+      record.createdAt = moment.utc().toISOString()
+    } else {
+      record.updatedAt = moment.utc().toISOString()
+    }
 
     var key = buildKey(collection, record.id)
 
