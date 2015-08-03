@@ -8,6 +8,8 @@ var fs = require('fs')
 var config = require('toml').parse(fs.readFileSync('./config.toml'))
 var db = require('./db')
 
+var stripe = require('stripe')(config.stripe.secretKey)
+
 var app = express()
 app.use(bodyParser.json())
 app.use('/images', express.static(__dirname + '/images'))
@@ -262,6 +264,62 @@ app.delete('/students/:studentId/donations/:id', function (req, res) {
       res.status(500).send('Internal Error')
     } else {
       res.status(204).send('No Content')
+    }
+  })
+})
+
+app.post('/students/:id/donate/card', function (req, res) {
+  var studentId = req.params.id
+
+  var amount = req.body.amount
+  var donor = req.body.donor
+  var email = req.body.email
+  var token = req.body.token
+
+  var amountInPennies = Math.floor(amount * 100)
+  var chargeDescription = 'Empower Nepal donation'
+
+  stripe.charges.create({
+    amount: amountInPennies,
+    currency: 'usd',
+    source: token,
+    description: chargeDescription
+  }, function (err, charge) {
+    if (err) {
+      // TODO: handle ALL error cases (charge failed, etc)
+      // TODO: log error
+      res.status(500).send('Internal Error')
+    } else {
+      var chargeId = charge.id
+
+      db.put('charges', charge, function (err, record) {
+        if (err) {
+          // TODO: handle this correctly, as in this instance
+          // the charge was successfully processed, but we were
+          // unable to save the charge's details (we have no record)
+          // TODO: log error
+          res.status(500).send('Internal Error')
+        } else {
+          var donationDescription = 'Credit card donation'
+
+          var donation = {
+            chargeId: chargeId,
+            studentId: studentId,
+            amount: amount,
+            description: donationDescription,
+            donor: donor,
+            email: email
+          }
+
+          db.put('donations', donation, function (err, record) {
+            if (err) {
+              res.status(500).send('Internal Error')
+            } else {
+              res.status(201).json(record)
+            }
+          })
+        }
+      })
     }
   })
 })
