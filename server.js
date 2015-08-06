@@ -3,10 +3,12 @@ var bodyParser = require('body-parser')
 var multer = require('multer')
 var uuid = require('node-uuid')
 var _ = require('lodash')
+var moment = require('moment')
 var fs = require('fs')
 
 var config = require('toml').parse(fs.readFileSync('./config.toml'))
 var db = require('./db')
+var emailer = require('./email')(config.mailgun)
 
 var stripe = require('stripe')(config.stripe.secretKey)
 
@@ -291,28 +293,60 @@ app.post('/students/:id/donate/card', function (req, res) {
       res.status(500).send('Internal Error')
     } else {
       var chargeId = charge.id
+      var donationDescription = 'Credit card donation'
+
+      var donation = {
+        chargeId: chargeId,
+        studentId: studentId,
+        amount: amount,
+        description: donationDescription,
+        donor: donor,
+        email: email
+      }
+
+      var date = moment.utc().format('dddd, MMMM Do, YYYY')
+      var prettyAmount = '$' + amount
+
+      var emailDetails = {
+        from: config.email.from,
+        to: email,
+        subject: 'Thank you for your donation! Here is your receipt.',
+        text: '' +
+          donor + ',' +
+          '\n\n' +
+          'Thank you for your donation!' +
+          '\n\n' +
+          'Date: ' + date + '\n' +
+          'Amount: ' + prettyAmount +
+          '\n\n' +
+          'If you need to contact us, simply reply to this email and we will be back in touch as soon as possible.' +
+          '\n\n' +
+          'Student ID: ' + studentId + '\n' +
+          'Charge ID: ' + chargeId
+      }
+
+      emailer.send(emailDetails, function (err) {
+        if (err) {
+          // TODO: log the fact that we were able to charge the card
+          // but were unable to deliver an email receipt
+          // TODO: rollback the charge?
+        }
+      })
 
       db.put('charges', charge, function (err, record) {
         if (err) {
           // TODO: handle this correctly, as in this instance
           // the charge was successfully processed, but we were
           // unable to save the charge's details (we have no record)
-          // TODO: log error
+          // TODO: log the fact that we were able to charge the card
+          // but were unable to save a record of the charge
+          // TODO: rollback the charge?
           res.status(500).send('Internal Error')
         } else {
-          var donationDescription = 'Credit card donation'
-
-          var donation = {
-            chargeId: chargeId,
-            studentId: studentId,
-            amount: amount,
-            description: donationDescription,
-            donor: donor,
-            email: email
-          }
-
           db.put('donations', donation, function (err, record) {
             if (err) {
+              // TODO: log the fact that we were able to charge the card
+              // but were unable to create a donation for the charge
               res.status(500).send('Internal Error')
             } else {
               res.status(201).json(record)

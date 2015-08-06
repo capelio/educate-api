@@ -8,6 +8,7 @@
     "leveldown": "^1.4.0",
     "levelup": "^1.2.1",
     "lodash": "^3.10.0",
+    "mailgun-js": "^0.7.1",
     "moment": "^2.10.6",
     "multer": "^0.1.8",
     "node-uuid": "^1.4.3",
