@@ -321,6 +321,8 @@ app.post('/students/:id/donate/card', function (req, res) {
           '\n\n' +
           'If you need to contact us, simply reply to this email and we will be back in touch as soon as possible.' +
           '\n\n' +
+          ' - The Lift Up Nepal Team' +
+          '\n\n' +
           'Student ID: ' + studentId + '\n' +
           'Charge ID: ' + chargeId
       }
