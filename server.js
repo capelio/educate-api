@@ -5,10 +5,12 @@ var uuid = require('node-uuid')
 var _ = require('lodash')
 var moment = require('moment')
 var fs = require('fs')
+var Joi = require('joi')
 
 var config = require('toml').parse(fs.readFileSync('./config.toml'))
 var db = require('./db')
 var emailer = require('./email')(config.mailgun)
+var querySchemas = require('./query-schemas')
 
 var stripe = require('stripe')(config.stripe.secretKey)
 
@@ -100,33 +102,76 @@ app.post('/students', authenticateRequest, function (req, res) {
 })
 
 app.get('/students', function (req, res) {
-  db.getAll('students', function (err, records) {
-    if (err) {
+  sanitizeQueryUsingSchema(req.query, querySchemas.student, function (err, query) {
+    if (err && err.name === 'ValidationError') {
+      res.status(400).json(err)
+    } else if (err) {
       res.status(500).send('Internal Error')
     } else {
-      // Only get student donations if there are student records
-      if (!records.length) {
-        res.status(200).json([])
-      } else {
-        var done = _.after(records.length, function () {
-          res.status(200).json(records)
-        })
+      /*
+       * A student's "funded" property does not exist as a property on
+       * its JSON record. We determined a student's funded status by
+       * checking whether or not it has received enough donations to
+       * reach its funding goal.
+       *
+       * Before querying the database, we checked whether or not we will
+       * need to filter on funded status. If so, we set that knowledge
+       * aside for future use and delete the funded property from the
+       * query we send to the database. Otherwise, as no students
+       * have a funded property, the query wouldn't return any records.
+       */
+      var filterByFunded = _.isBoolean(query.funded)
 
-        _.forEach(records, function (student) {
-          db.query('donations', {studentId: student.id}, function (err, records) {
-            if (err) {
-              console.error(err)
-            } else if (records) {
-              student.donations = records
-            }
-
-            done()
-          })
-        })
+      if (filterByFunded) {
+        var fundedFilter = query.funded
+        delete query.funded
       }
+
+      db.query('students', query, function (err, records) {
+        if (err) {
+          res.status(500).send('Internal Error')
+        } else {
+          // Only get student donations if there are student records
+          if (!records.length) {
+            res.status(200).json([])
+          } else {
+            var done = _.after(records.length, function () {
+              if (filterByFunded) {
+                var filteredStudents = _.filter(records, function (student) {
+                  return (fundedFilter ? studentIsFunded(student) : studentIsNotFunded(student))
+                })
+
+                res.status(200).json(filteredStudents)
+              } else {
+                res.status(200).json(records)
+              }
+            })
+
+            _.forEach(records, function (student) {
+              db.query('donations', {studentId: student.id}, function (err, records) {
+                if (err) {
+                  console.error(err)
+                } else if (records) {
+                  student.donations = records
+                }
+
+                done()
+              })
+            })
+          }
+        }
+      })
     }
   })
 })
+
+function studentIsFunded (student) {
+  return student.goal === _.sum(student.donations, 'amount')
+}
+
+function studentIsNotFunded (student) {
+  return student.goal > _.sum(student.donations, 'amount')
+}
 
 app.get('/students/:id', function (req, res) {
   var id = req.params.id
@@ -359,6 +404,14 @@ app.post('/students/:id/donate/card', function (req, res) {
     }
   })
 })
+
+function sanitizeQueryUsingSchema (query, schema, callback) {
+  Joi.validate(query, schema, function (err, value) {
+    if (err) return callback(err)
+
+    callback(null, value)
+  })
+}
 
 var server = app.listen(config.server.port, function () {
   var host = server.address().address
