@@ -88,11 +88,11 @@ app.post('/uploads/images', authenticateRequest, [ multer({ dest: './images', re
   res.status(201).json({filename: res.locals.filename})
 })
 
-app.post('/students', authenticateRequest, function (req, res) {
-  var student = req.body
-  delete student.donations
+app.post('/causes', authenticateRequest, function (req, res) {
+  var cause = req.body
+  delete cause.donations
 
-  db.put('students', student, function (err, record) {
+  db.put('causes', cause, function (err, record) {
     if (err) {
       res.status(500).send('Internal Error')
     } else {
@@ -101,23 +101,23 @@ app.post('/students', authenticateRequest, function (req, res) {
   })
 })
 
-app.get('/students', function (req, res) {
-  sanitizeQueryUsingSchema(req.query, querySchemas.student, function (err, query) {
+app.get('/causes', function (req, res) {
+  sanitizeQueryUsingSchema(req.query, querySchemas.cause, function (err, query) {
     if (err && err.name === 'ValidationError') {
       res.status(400).json(err)
     } else if (err) {
       res.status(500).send('Internal Error')
     } else {
       /*
-       * A student's "funded" property does not exist as a property on
-       * its JSON record. We determined a student's funded status by
+       * A cause's "funded" property does not exist as a property on
+       * its JSON record. We determine a cause's funded status by
        * checking whether or not it has received enough donations to
        * reach its funding goal.
        *
-       * Before querying the database, we checked whether or not we will
+       * Before querying the database, we check whether or not we will
        * need to filter on funded status. If so, we set that knowledge
        * aside for future use and delete the funded property from the
-       * query we send to the database. Otherwise, as no students
+       * query we send to the database. Otherwise, as no causes
        * have a funded property, the query wouldn't return any records.
        */
       var filterByFunded = _.isBoolean(query.funded)
@@ -127,32 +127,32 @@ app.get('/students', function (req, res) {
         delete query.funded
       }
 
-      db.query('students', query, function (err, records) {
+      db.query('causes', query, function (err, records) {
         if (err) {
           res.status(500).send('Internal Error')
         } else {
-          // Only get student donations if there are student records
+          // Only get cause donations if there are cause records
           if (!records.length) {
             res.status(200).json([])
           } else {
             var done = _.after(records.length, function () {
               if (filterByFunded) {
-                var filteredStudents = _.filter(records, function (student) {
-                  return (fundedFilter ? studentIsFunded(student) : studentIsNotFunded(student))
+                var filteredCauses = _.filter(records, function (cause) {
+                  return (fundedFilter ? causeIsFunded(cause) : causeIsNotFunded(cause))
                 })
 
-                res.status(200).json(filteredStudents)
+                res.status(200).json(filteredCauses)
               } else {
                 res.status(200).json(records)
               }
             })
 
-            _.forEach(records, function (student) {
-              db.query('donations', {studentId: student.id}, function (err, records) {
+            _.forEach(records, function (cause) {
+              db.query('donations', {causeId: cause.id}, function (err, records) {
                 if (err) {
                   console.error(err)
                 } else if (records) {
-                  student.donations = records
+                  cause.donations = records
                 }
 
                 done()
@@ -165,18 +165,20 @@ app.get('/students', function (req, res) {
   })
 })
 
-function studentIsFunded (student) {
-  return student.goal === _.sum(student.donations, 'amount')
+function causeIsFunded (cause) {
+  var donated = _.sum(cause.donations, 'amount')
+  return donated >= cause.goal
 }
 
-function studentIsNotFunded (student) {
-  return student.goal > _.sum(student.donations, 'amount')
+function causeIsNotFunded (cause) {
+  var donated = _.sum(cause.donations, 'amount')
+  return donated < cause.goal
 }
 
-app.get('/students/:id', function (req, res) {
+app.get('/causes/:id', function (req, res) {
   var id = req.params.id
 
-  db.get('students', id, function (err, record) {
+  db.get('causes', id, function (err, record) {
     if (err) {
       res.status(500).send('Internal Error')
     } else if (!record) {
@@ -187,19 +189,19 @@ app.get('/students/:id', function (req, res) {
   })
 })
 
-app.put('/students/:id', authenticateRequest, function (req, res) {
+app.put('/causes/:id', authenticateRequest, function (req, res) {
   var id = req.params.id
-  var student = req.body
-  delete student.donations
+  var cause = req.body
+  delete cause.donations
 
-  db.exists('students', id, function (err, exists) {
+  db.exists('causes', id, function (err, exists) {
     if (err) {
       res.status(500).send('Internal Error')
     } else if (!exists) {
       res.status(404).send('Not Found')
     } else {
 
-      db.put('students', student, function (err, record) {
+      db.put('causes', cause, function (err, record) {
         if (err) {
           res.status(500).send('Internal Error')
         } else {
@@ -210,18 +212,18 @@ app.put('/students/:id', authenticateRequest, function (req, res) {
   })
 })
 
-app.delete('/students/:id', authenticateRequest, function (req, res) {
+app.delete('/causes/:id', authenticateRequest, function (req, res) {
   var id = req.params.id
 
-  db.get('students', id, function (err, student) {
+  db.get('causes', id, function (err, cause) {
     if (err) {
       res.status(500).send('Internal Error')
-    } else if (!student) {
+    } else if (!cause) {
       res.status(404).send('Not Found')
     } else {
-      var profileImage = student.profileImage
+      var profileImage = cause.profileImage
 
-      db.destroy('students', id, function (err) {
+      db.destroy('causes', id, function (err) {
         if (err) {
           res.status(500).send('Internal Error')
         } else {
@@ -242,11 +244,11 @@ app.delete('/students/:id', authenticateRequest, function (req, res) {
   })
 })
 
-app.post('/students/:studentId/donations', function (req, res) {
-  // TODO: make sure student exists first or return 404
+app.post('/causes/:causeId/donations', function (req, res) {
+  // TODO: make sure cause exists first or return 404
 
   var donation = req.body
-  donation.studentId = req.params.studentId
+  donation.causeId = req.params.causeId
 
   db.put('donations', donation, function (err, record) {
     if (err) {
@@ -257,12 +259,12 @@ app.post('/students/:studentId/donations', function (req, res) {
   })
 })
 
-app.get('/students/:studentId/donations', function (req, res) {
-  // TODO: make sure student exists first or return 404
+app.get('/causes/:causeId/donations', function (req, res) {
+  // TODO: make sure cause exists first or return 404
 
-  var studentId = req.params.studentId
+  var causeId = req.params.causeId
   var query = {
-    studentId: studentId
+    causeId: causeId
   }
 
   db.query('donations', query, function (err, records) {
@@ -274,8 +276,8 @@ app.get('/students/:studentId/donations', function (req, res) {
   })
 })
 
-app.get('/students/:studentId/donations/:id', function (req, res) {
-  // TODO: make sure student exists first or return 404
+app.get('/causes/:causeId/donations/:id', function (req, res) {
+  // TODO: make sure cause exists first or return 404
   var id = req.params.id
 
   db.get('donations', id, function (err, record) {
@@ -289,8 +291,8 @@ app.get('/students/:studentId/donations/:id', function (req, res) {
   })
 })
 
-app.put('/students/:studentId/donations/:id', function (req, res) {
-  // TODO: make sure student exists first or return 404
+app.put('/causes/:causeId/donations/:id', function (req, res) {
+  // TODO: make sure cause exists first or return 404
   var donation = req.body
 
   db.put('donations', donation, function (err, record) {
@@ -302,8 +304,8 @@ app.put('/students/:studentId/donations/:id', function (req, res) {
   })
 })
 
-app.delete('/students/:studentId/donations/:id', function (req, res) {
-  // TODO: make sure student exists first or return 404
+app.delete('/causes/:causeId/donations/:id', function (req, res) {
+  // TODO: make sure cause exists first or return 404
   var id = req.params.id
 
   db.destroy('donations', id, function (err) {
@@ -315,8 +317,8 @@ app.delete('/students/:studentId/donations/:id', function (req, res) {
   })
 })
 
-app.post('/students/:id/donate/card', function (req, res) {
-  var studentId = req.params.id
+app.post('/causes/:id/donate/card', function (req, res) {
+  var causeId = req.params.id
 
   var amount = req.body.amount
   var donor = req.body.donor
@@ -342,7 +344,7 @@ app.post('/students/:id/donate/card', function (req, res) {
 
       var donation = {
         chargeId: chargeId,
-        studentId: studentId,
+        causeId: causeId,
         amount: amount,
         description: donationDescription,
         donor: donor,
@@ -368,7 +370,7 @@ app.post('/students/:id/donate/card', function (req, res) {
           '\n\n' +
           ' - The Lift Up Nepal Team' +
           '\n\n' +
-          'Student ID: ' + studentId + '\n' +
+          'Cause ID: ' + causeId + '\n' +
           'Charge ID: ' + chargeId
       }
 

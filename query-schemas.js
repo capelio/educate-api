@@ -1,7 +1,7 @@
 var Joi = require('joi')
 
 module.exports = {
-  student: Joi.object().keys({
+  cause: Joi.object().keys({
     id: Joi.string(),
     createdAt: Joi.string(),
     funded: Joi.boolean(),
