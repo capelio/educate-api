@@ -8,7 +8,7 @@ var fs = require('fs')
 var Joi = require('joi')
 
 var config = require('toml').parse(fs.readFileSync('./config.toml'))
-var db = require('./db')
+var db = require(config.db.path)
 var emailer = require('./email')(config.mailgun)
 var querySchemas = require('./query-schemas')
 
