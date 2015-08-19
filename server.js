@@ -178,13 +178,22 @@ function causeIsNotFunded (cause) {
 app.get('/causes/:id', function (req, res) {
   var id = req.params.id
 
-  db.get('causes', id, function (err, record) {
+  db.get('causes', id, function (err, cause) {
     if (err) {
       res.status(500).send('Internal Error')
-    } else if (!record) {
+    } else if (!cause) {
       res.status(404).send('Not Found')
     } else {
-      res.json(record)
+      db.query('donations', { causeId: id }, function (err, donations) {
+        if (err) {
+          res.status(500).send('Internal Error')
+        } else if (!donations) {
+          res.json(cause)
+        } else {
+          cause.donations = donations
+          res.json(cause)
+        }
+      })
     }
   })
 })
