@@ -9,6 +9,7 @@ var Joi = require('joi')
 
 var config = require('toml').parse(fs.readFileSync('./config.toml'))
 var db = require(config.db.path)
+var naturalKeys = require('./natural-keys')
 var emailer = require('./email')(config.mailgun)
 var querySchemas = require('./query-schemas')
 
@@ -92,11 +93,26 @@ app.post('/causes', authenticateRequest, function (req, res) {
   var cause = req.body
   delete cause.donations
 
-  db.put('causes', cause, function (err, record) {
+  // Add a natural ID for easy reference (e.g. 101, 102, 103, etc)
+  // TODO: revisit this when we do the persistence refactor
+  naturalKeys.next('causes', function (err, naturalKey) {
     if (err) {
       res.status(500).send('Internal Error')
     } else {
-      res.status(201).json(record)
+      cause.naturalKey = naturalKey
+
+      db.put('causes', cause, function (err, record) {
+        if (err) {
+          res.status(500).send('Internal Error')
+        } else {
+          // TODO: revisit during persistence refactor. As it stands,
+          // we don't do any rollback if the next natural key fails
+          // to commit.
+          naturalKeys.commit('causes', naturalKey)
+
+          res.status(201).json(record)
+        }
+      })
     }
   })
 })
