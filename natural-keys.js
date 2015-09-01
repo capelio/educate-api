@@ -3,7 +3,7 @@ var fs = require('fs')
 var config = require('toml').parse(fs.readFileSync('./config.toml'))
 var db = require(config.db.path)
 
-nextNaturalKeyFunctions = {
+var nextNaturalKeyFunctions = {
   causes: function (callback) {
     db.get('naturalKeys', 'causes', function (err, record) {
       if (err) {
