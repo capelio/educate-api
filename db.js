@@ -8,6 +8,8 @@ var db = levelup('./db', {
 })
 
 module.exports = {
+  levelup: db,
+
   put: function (collection, record, callback) {
     var isNew = !record.id
 
