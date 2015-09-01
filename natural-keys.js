@@ -6,13 +6,15 @@ var db = require(config.db.path)
 var nextNaturalKeyFunctions = {
   causes: function (callback) {
     db.get('naturalKeys', 'causes', function (err, record) {
+      var nextNaturalKey
+
       if (err) {
         callback(err)
       } else if (!record) {
-        var nextNaturalKey = 1
+        nextNaturalKey = 1
         callback(null, nextNaturalKey)
       } else {
-        var nextNaturalKey = ++record.naturalKey
+        nextNaturalKey = ++record.naturalKey
         callback(null, nextNaturalKey)
       }
     })
